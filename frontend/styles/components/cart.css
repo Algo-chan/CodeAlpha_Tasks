@@ -1,0 +1,510 @@
+/* =============================================================================
+   CART
+   The side cart / mini cart. Desktop: a trailing drawer. Mobile: a bottom
+   sheet via overlay.css.
+
+   Anatomy
+     .cart__progress      free-delivery threshold. A concrete goal converts
+                          better than a bare subtotal, and it is the one place
+                          an extra progress bar earns its space.
+     .cart__lines         scrollable, shrinkable
+     .cart__summary       pinned totals + actions, always visible
+   ========================================================================== */
+
+/* --- Progress ------------------------------------------------------------- */
+
+.cart__progress {
+  flex-shrink: 0;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-primary-subtle);
+  border-bottom: var(--border-width-hairline) solid var(--color-primary-border);
+}
+
+.cart__progress-text {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-snug);
+  color: var(--color-primary-hover);
+}
+
+.cart__progress-text strong {
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.cart__progress-track {
+  block-size: 0.25rem;
+  margin-block-start: var(--space-2xs);
+  background-color: var(--ember-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.cart__progress-bar {
+  block-size: 100%;
+  background-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: inline-size var(--duration-slow) var(--ease-standard);
+}
+
+/* The truck marks the state where the basket has reached the free-delivery
+   threshold. Without a size it inherits the icon default and renders larger than
+   the line it sits on. */
+.cart__progress-icon {
+  display: inline-block;
+  vertical-align: -0.15em;
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  margin-inline-end: var(--space-3xs);
+}
+
+/* --- Lines ----------------------------------------------------------------- */
+
+.cart__lines {
+  display: flex;
+  flex-direction: column;
+}
+
+.cart-line {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  position: relative;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.cart-line + .cart-line {
+  border-block-start: var(--border-width-hairline) solid var(--color-border-subtle);
+}
+
+.cart-line:hover {
+  background-color: var(--color-surface-hover);
+}
+
+/* Pending removal: collapse the row out rather than making it vanish, so the
+   shopper can see what left and undo it. */
+.cart-line.is-removing {
+  opacity: 0;
+  transform: translate3d(1.5rem, 0, 0);
+  transition:
+    opacity var(--duration-fast) var(--ease-standard),
+    transform var(--duration-normal) var(--ease-exit);
+}
+
+/* The drawer's whole body is this one flex column. The line list is the only
+   part allowed to scroll; the progress meter and the totals stay put, because a
+   subtotal that scrolls out of view while the shopper is changing a quantity is
+   worse than not showing one at all. */
+.cart-panel {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  block-size: 100%;
+}
+
+.cart-panel .cart__lines {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.cart-panel .cart__summary {
+  flex-shrink: 0;
+}
+
+/* On the cart page the meter is a standalone block rather than the drawer's
+   pinned header, so it needs its own rounded panel and vertical rhythm. */
+.cart-page .cart__progress {
+  border: var(--border-width-hairline) solid var(--color-primary-border);
+  border-radius: var(--radius-lg);
+  margin-block: var(--space-lg);
+}
+
+/* The line list is a card on the page, matching the summary panel, rather than
+   the drawer's bare scrolling list. `overflow: hidden` keeps a row's hover
+   background from squaring off the rounded corners. */
+.cart-page .cart__lines {
+  background-color: var(--color-surface);
+  border: var(--border-width-hairline) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.cart-line__media {
+  inline-size: 5rem;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background-color: var(--color-surface-muted);
+  border-radius: var(--radius-md);
+  /* A grid item stretches to the row by default, which would override the
+     square aspect ratio when the body is taller. Keep it a square. */
+  align-self: start;
+}
+
+.cart-line__media img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.cart-line__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  min-inline-size: 0;
+}
+
+.cart-line__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.cart-line__name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-snug);
+  color: var(--color-text);
+}
+
+.cart-line__name:hover {
+  color: var(--color-primary-hover);
+}
+
+.cart-line__remove {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  margin-inline-start: auto;
+  margin-block-start: -0.125rem;
+  color: var(--color-text-subtle);
+  border-radius: var(--radius-sm);
+  opacity: 0.6;
+  transition:
+    opacity var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.cart-line__remove:hover {
+  opacity: 1;
+  color: var(--color-error);
+  background-color: var(--color-error-bg);
+}
+
+.cart-line__remove svg {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+}
+
+/* Variant read-back, e.g. "Black / 42". */
+.cart-line__variant {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3xs);
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-muted);
+}
+
+.cart-line__variant-dot {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: var(--radius-full);
+  background-color: var(--swatch-color, var(--color-border));
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+}
+
+.cart-line__sku {
+  font-family: var(--font-mono);
+  color: var(--color-text-subtle);
+}
+
+/* A line that cannot be bought stays in the basket, flagged rather than deleted.
+   The flag is a left rule plus a tinted field, not a red background: the row is
+   still readable and still looks like part of the basket rather than an error
+   page, which matters because the shopper's own items are in it. */
+.cart-line--flagged {
+  background-color: var(--color-warning-bg);
+  box-shadow: inset 3px 0 0 var(--color-warning-border);
+}
+
+.cart-line--flagged:hover {
+  background-color: var(--color-warning-bg);
+}
+
+/* The reason is prose, not a code - "Sold out while it was in your cart" - so it
+   takes the sans face instead of the monospace the SKU uses. */
+.cart-line--flagged .cart-line__sku {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
+  color: var(--color-warning-text);
+}
+
+/* A flagged line has no stepper (the quantity cannot be changed), so the total
+   goes on the right on its own rather than being paired with nothing. */
+.cart-line--flagged .cart-line__bottom {
+  justify-content: flex-start;
+  gap: var(--space-md);
+}
+
+.cart-line__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-2xs);
+}
+
+.cart-line__unit {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.cart-line__total {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Quantity in a line --------------------------------------------------- */
+
+.cart-line .stepper {
+  flex-shrink: 0;
+}
+
+.cart-line .stepper__button {
+  inline-size: 2.25rem;
+  min-block-size: 2.25rem;
+}
+
+.cart-line .stepper__input {
+  inline-size: 2.25rem;
+  min-block-size: 2.25rem;
+  font-size: var(--font-size-xs);
+}
+
+/* --- Summary -------------------------------------------------------------- */
+
+.cart__summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border-top: var(--border-width-hairline) solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+.cart__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* The rows are a plain `<dl>`, which the reset zeroes out. A small column gap
+   keeps subtotal/delivery/total from sitting flush against each other. */
+.cart__summary dl,
+.cart-page__summary dl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.cart__row dt {
+  font-weight: var(--font-weight-regular);
+}
+
+.cart__row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.cart__row--muted {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* Delivery is a placeholder line, clearly labelled as one. Shipping is
+   calculated server-side in a later phase. */
+.cart__row--placeholder dd {
+  color: var(--color-text-subtle);
+  font-style: italic;
+}
+
+.cart__row--total {
+  padding-block-start: var(--space-xs);
+  margin-block-start: var(--space-2xs);
+  border-top: var(--border-width-hairline) solid var(--color-border);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.cart__row--total dt {
+  font-weight: var(--font-weight-semibold);
+}
+
+.cart__row--total dd {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.cart__note {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-subtle);
+  line-height: var(--line-height-snug);
+}
+
+/* Sits directly under the checkout button it replaces. It takes focus when the
+   shopper asks why checkout is inert, so it needs a visible ring of its own
+   rather than relying on the button's - which is gone by then. */
+.cart__note--inline {
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--color-text-secondary);
+  background-color: var(--color-surface-muted);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.cart__note--inline:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.cart__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border-top: var(--border-width-hairline) solid var(--color-border-subtle);
+}
+
+/* --- Header count --------------------------------------------------------- */
+
+.cart__count {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Free-shipping marker inside a line ---------------------------------- */
+
+.cart-line__flag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  font-size: var(--font-size-3xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-warning-text);
+}
+
+.cart-line__flag svg {
+  inline-size: 0.625rem;
+  block-size: 0.625rem;
+}
+
+/* --- Cart page variant ----------------------------------------------------- */
+
+/* --- Page frame ------------------------------------------------------------
+   The container and the vertical rhythm in one element: the breadcrumb, the
+   two-column grid and the recommendations are a single column of content, so the
+   gutters and the gaps are decided here once. `.collection-page` and
+   `.wishlist-page` have the same contract. */
+
+.cart-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xl);
+}
+
+.cart-page {
+  display: grid;
+  gap: var(--space-2xl);
+  align-items: start;
+}
+
+@media (min-width: 64em) {
+  .cart-page {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    gap: var(--space-3xl);
+  }
+}
+
+.cart-page__summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background-color: var(--color-surface);
+  border: var(--border-width-hairline) solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+@media (min-width: 64em) {
+  .cart-page__summary {
+    position: sticky;
+    top: calc(var(--header-height) + var(--space-lg));
+  }
+}
+
+/* --- Table-style lines on the cart page ---------------------------------- */
+
+.cart-table {
+  inline-size: 100%;
+}
+
+.cart-table__head {
+  display: none;
+  padding-block: var(--space-xs);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: var(--text-transform-label);
+  color: var(--color-text-subtle);
+  border-bottom: var(--border-width-hairline) solid var(--color-border);
+}
+
+@media (min-width: 48em) {
+  .cart-table__head {
+    display: grid;
+    grid-template-columns: 6rem minmax(0, 1fr) 7rem 6.5rem 2.25rem;
+    gap: var(--space-md);
+    align-items: center;
+  }
+}
+
+@media (min-width: 48em) {
+  .cart-line--table {
+    grid-template-columns: 6rem minmax(0, 1fr) 7rem 6.5rem 2.25rem;
+    gap: var(--space-md);
+    align-items: center;
+    padding-inline: 0;
+  }
+}
+
+/* --- Digital delivery note ------------------------------------------------ */
+
+.cart-line__digital {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  font-size: var(--font-size-3xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-info-text);
+}
+
+.cart-line__digital svg {
+  inline-size: 0.625rem;
+  block-size: 0.625rem;
+}

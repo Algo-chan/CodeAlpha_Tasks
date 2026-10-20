@@ -1,0 +1,392 @@
+/**
+ * Request validation for the catalogue endpoints.
+ *
+ * This file is the security boundary for every Phase 5 read endpoint, so that no
+ * controller, service or repository ever sees an unvalidated value.
+ *
+ * WHAT IS REJECTED RATHER THAN SILENTLY FIXED
+ *
+ *   page=0, page=-5, page=abc          422, not a quiet clamp
+ *   limit=100000                        422, above the storefront maximum
+ *   sort=; DROP TABLE products         422, not in the whitelist
+ *   minPrice=-500                       422, a negative price is meaningless
+ *   minPrice=90000&maxPrice=1000       422, a crossed range is a mistake
+ *   category=<script>                   422, slug format enforced
+ *   attr.size=<script>                  422, bounded printable values only
+ *
+ * A rejected filter returns a 422 with a field error. Quietly clamping instead
+ * would make the URL a lie about what it did, and silently ignoring a hostile
+ * value would make a security control look like it passed.
+ */
+import { z } from 'zod';
+import { PAGINATION } from '../config/constants.js';
+import { MAX_PRICE_MINOR } from '../services/money.js';
+import { SORT_KEYS, DEFAULT_LIMIT, MAX_LIMIT } from '../repositories/catalogue.repository.js';
+
+/** Longest search term accepted. Longer is a typo or an attack. */
+export const MAX_QUERY_LENGTH = 120;
+
+/** Most attribute values one key may carry. */
+export const MAX_ATTRIBUTE_VALUES = 50;
+
+/**
+ * Slug format, matching the `products_slug_format` and `categories_slug_format`
+ * CHECK constraints. Enforcing it here means an impossible slug is rejected with
+ * a specific message instead of reaching the database.
+ */
+export const slugSchema = z
+  .string()
+  .trim()
+  .min(1, 'slug is required')
+  .max(220, 'slug is too long')
+  .regex(
+    /^[a-z0-9]+(-[a-z0-9]+)*$/,
+    'slug may contain lowercase letters, numbers and single hyphens only'
+  );
+
+/** A product slug route parameter. */
+export const productSlugParamSchema = z.object({ slug: slugSchema });
+
+/** A category slug route parameter. */
+export const categorySlugParamSchema = z.object({ slug: slugSchema });
+
+/** A UUID route parameter. */
+export const uuidParamSchema = z.object({
+  id: z.string().trim().uuid('id must be a UUID'),
+});
+
+/* -------------------------------------------------------------------------- */
+/* Shared list pieces                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A price bound in minor units.
+ *
+ * `z.coerce.number()` turns `?minPrice=1870000` into 1870000. The integer check
+ * rejects `1870000.50` rather than truncating it — a truncated bound would
+ * quietly include or exclude the wrong products, which is worse than an error.
+ */
+const priceMinorSchema = z.coerce
+  .number()
+  .int('price must be a whole number of minor units (ETB cents)')
+  .min(0, 'price cannot be negative')
+  .max(MAX_PRICE_MINOR, 'price is above the maximum storable price');
+
+/**
+ * A repeatable query parameter, accepting both `?brand=Nike&brand=Adidas` and
+ * `?brand=Nike,Adidas` because both occur in real URLs. Values are de-duplicated
+ * and the count is capped so the bound parameter list cannot grow unbounded.
+ */
+function repeatable(inner, max = 20) {
+  return z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((value) => {
+      if (value === undefined || value === null || value === '') return [];
+      const list = Array.isArray(value) ? value : String(value).split(',');
+      return [
+        ...new Set(list.map((entry) => String(entry).trim()).filter((entry) => entry !== '')),
+      ].slice(0, max);
+    })
+    .refine((list) => list.every((entry) => inner.safeParse(entry).success), {
+      message: 'one or more values are not valid',
+    });
+}
+
+const brandSchema = z.string().trim().min(1).max(80);
+const productTypeSchema = z.enum(['PHYSICAL', 'DIGITAL']);
+const availabilitySchema = z.enum(['in_stock', 'out_of_stock']);
+
+/**
+ * Attribute filters arrive as `attr.<key>=<value>`, which is what keeps the
+ * filter set dynamic: a phone filters on `attr.storage`, a shoe on `attr.size`,
+ * and nothing in this file enumerates either.
+ *
+ * The key becomes a JSONB object key and the value becomes a JSONB value, so
+ * both are restricted to conservative, bounded shapes.
+ */
+export const attributeKeySchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(40)
+  .regex(/^[a-zA-Z0-9_]+$/, 'attribute key may contain letters, numbers and underscores');
+
+/**
+ * Characters an attribute value may contain: anything printable that is not a
+ * quote, an angle bracket, an ampersand or a backtick.
+ *
+ * Built with `new RegExp` rather than a literal so the exclusions can be written
+ * as an explicit, readable list. A literal would need an invisible control range
+ * (`\u0000-\u001F`) to exclude newlines and tabs, and `no-control-regex` cannot tell that
+ * deliberate exclusion apart from a typo — so the literal version reads as either
+ * a lint error or, once suppressed, an invisible range nobody can audit.
+ */
+const ATTRIBUTE_VALUE_PATTERN = new RegExp(
+  '^[^-~"' + "'`&\\\\\\r\\n\\t\\u0000-\\u001f\\u007f-\\u009f" + ']+$',
+  'u'
+);
+
+export const attributeValueSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(60)
+  // Printable only. Excludes `<>"'&\` so a value can never break out of a JSON
+  // string, an HTML attribute, or a log line, and excludes control characters so
+  // a value cannot smuggle a newline into a log line or a terminal.
+  .regex(ATTRIBUTE_VALUE_PATTERN, 'attribute value contains unsupported characters');
+
+/**
+ * Collects `attr.*` parameters into `{ key: [values] }`.
+ *
+ * The list schemas are `.passthrough()` for exactly this reason: Zod's default
+ * object behaviour strips unknown keys, which would discard every attribute
+ * filter before this function ever saw it. Each key and value is validated on
+ * its own here rather than being trusted, so an unsupported one is dropped
+ * instead of reaching SQL.
+ *
+ * @param {Record<string, unknown>} query
+ * @returns {Record<string, string[]>}
+ */
+export function extractAttributeParams(query) {
+  const attributes = {};
+
+  for (const [rawKey, raw] of Object.entries(query ?? {})) {
+    if (!rawKey.startsWith('attr.')) continue;
+
+    const name = rawKey.slice('attr.'.length).trim();
+    if (!attributeKeySchema.safeParse(name).success) continue;
+
+    const values = (Array.isArray(raw) ? raw : [raw])
+      .flatMap((entry) => String(entry).split(','))
+      .map((entry) => entry.trim())
+      .filter((entry) => attributeValueSchema.safeParse(entry).success)
+      .slice(0, MAX_ATTRIBUTE_VALUES);
+
+    if (values.length > 0) attributes[name] = [...new Set(values)];
+  }
+
+  return attributes;
+}
+
+/** Sort keys come from the repository whitelist, never a free string. */
+const sortSchema = z.enum(SORT_KEYS).default('featured');
+
+/** Page number. Bounded above so `?page=999999999` cannot force a huge OFFSET. */
+const pageSchema = z.coerce
+  .number()
+  .int('page must be a whole number')
+  .min(1, 'page starts at 1')
+  .max(10_000, 'page is unreasonably high')
+  .default(PAGINATION.DEFAULT_PAGE);
+
+/**
+ * Page size.
+ *
+ * The cap is the storefront's, tighter than `PAGINATION.MAX_LIMIT`: 60 cards is
+ * already more than anyone scrolls, and a larger limit would let one request
+ * pull the whole catalogue through the API.
+ */
+const limitSchema = z.coerce
+  .number()
+  .int('limit must be a whole number')
+  .min(1, 'limit must be at least 1')
+  .max(MAX_LIMIT, `limit must be ${MAX_LIMIT} or fewer`)
+  .default(DEFAULT_LIMIT);
+
+/** `?includeFacets=0` lets a client skip the extra facet queries. */
+const includeFacetsSchema = z
+  .enum(['0', '1'])
+  .default('1')
+  .transform((value) => value === '1');
+
+/**
+ * The filter block shared by `/products`, `/categories/:slug` and `/search`.
+ *
+ * `superRefine` runs before the transform, so a crossed price range never reaches
+ * the transform's output at all.
+ */
+const filterFields = {
+  brand: repeatable(brandSchema),
+  productType: repeatable(productTypeSchema, 2),
+  availability: availabilitySchema.optional(),
+  minPrice: priceMinorSchema.optional(),
+  maxPrice: priceMinorSchema.optional(),
+};
+
+/** A crossed range is a mistake, not an empty result set. */
+function rejectCrossedRange(value, ctx) {
+  const { minPrice, maxPrice } = value ?? {};
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['minPrice'],
+      message: 'minPrice cannot be greater than maxPrice',
+    });
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Product list                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `GET /api/v1/products`
+ *
+ * @type {z.ZodTypeAny}
+ */
+export const listProductsQuerySchema = z
+  .object({
+    category: repeatable(slugSchema, 5),
+    ...filterFields,
+    q: z.string().trim().min(1).max(MAX_QUERY_LENGTH).optional(),
+    sort: sortSchema,
+    page: pageSchema,
+    limit: limitSchema,
+    includeFacets: includeFacetsSchema,
+  })
+  .passthrough()
+  .superRefine(rejectCrossedRange)
+  .transform((value) => {
+    const attributes = extractAttributeParams(value);
+    for (const key of Object.keys(value)) {
+      if (key.startsWith('attr.')) delete value[key];
+    }
+    return {
+      ...value,
+      categories: value.category,
+      attributes,
+    };
+  });
+
+/* -------------------------------------------------------------------------- */
+/* Product detail                                                                */
+/* -------------------------------------------------------------------------- */
+
+/** `GET /api/v1/products/:slug` */
+export const productSlugQuerySchema = z
+  .object({
+    includeRelated: z
+      .enum(['0', '1'])
+      .default('1')
+      .transform((value) => value === '1'),
+  })
+  .strip();
+
+/** `GET /api/v1/products/:slug/reviews` */
+export const reviewsQuerySchema = z
+  .object({
+    page: pageSchema,
+    limit: z.coerce
+      .number()
+      .int('limit must be a whole number')
+      .min(1, 'limit must be at least 1')
+      .max(50, 'limit must be 50 or fewer')
+      .default(10),
+  })
+  .strip();
+
+/* -------------------------------------------------------------------------- */
+/* Categories                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** `GET /api/v1/categories` */
+export const listCategoriesQuerySchema = z
+  .object({
+    flat: z
+      .enum(['0', '1'])
+      .default('0')
+      .transform((value) => value === '1'),
+    includeEmpty: z
+      .enum(['0', '1'])
+      .default('1')
+      .transform((value) => value === '1'),
+  })
+  .strip();
+
+/**
+ * `GET /api/v1/categories/:slug` — a category page also pages its products.
+ *
+ * NOTE THE MISSING `category` FIELD. The category comes from the PATH, so the
+ * schema deliberately does not accept `?category=`: a second category in the
+ * query string must not be able to widen a category page to somewhere else. The
+ * service injects the path slug into `categories` instead, which is why
+ * `toRepositoryFilters` reads `query.categories` rather than `query.category`.
+ *
+ * @param {string} slug the validated path slug
+ * @returns {z.ZodTypeAny}
+ */
+export function buildCategoryProductsQuerySchema(slug) {
+  return z
+    .object({
+      ...filterFields,
+      sort: sortSchema,
+      page: pageSchema,
+      limit: limitSchema,
+      includeFacets: includeFacetsSchema,
+    })
+    .passthrough()
+    .superRefine(rejectCrossedRange)
+    .transform((value) => {
+      const attributes = extractAttributeParams(value);
+      for (const key of Object.keys(value)) {
+        if (key.startsWith('attr.')) delete value[key];
+      }
+      // The path slug is the ONLY category filter, so it is assigned rather than
+      // appended to anything the client sent.
+      return { ...value, attributes, categories: [slug] };
+    });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Search                                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `GET /api/v1/search`
+ *
+ * An empty term is a validation error, not an empty result: `/search` with
+ * nothing typed should show the search box, not the entire catalogue.
+ */
+export const searchQuerySchema = z
+  .object({
+    q: z
+      .string()
+      .trim()
+      .min(1, 'enter something to search for')
+      .max(MAX_QUERY_LENGTH, 'search term is too long'),
+    category: repeatable(slugSchema, 5),
+    ...filterFields,
+    sort: sortSchema,
+    page: pageSchema,
+    limit: limitSchema,
+    includeFacets: includeFacetsSchema,
+  })
+  .passthrough()
+  .superRefine(rejectCrossedRange)
+  .transform((value) => {
+    const attributes = extractAttributeParams(value);
+    for (const key of Object.keys(value)) {
+      if (key.startsWith('attr.')) delete value[key];
+    }
+    return { ...value, categories: value.category, attributes };
+  });
+
+export default {
+  listProductsQuerySchema,
+  productSlugQuerySchema,
+  productSlugParamSchema,
+  reviewsQuerySchema,
+  listCategoriesQuerySchema,
+  buildCategoryProductsQuerySchema,
+  searchQuerySchema,
+  categorySlugParamSchema,
+  uuidParamSchema,
+  extractAttributeParams,
+  attributeKeySchema,
+  attributeValueSchema,
+  slugSchema,
+  MAX_QUERY_LENGTH,
+  MAX_ATTRIBUTE_VALUES,
+};

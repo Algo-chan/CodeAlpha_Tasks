@@ -1,0 +1,23 @@
+/* =============================================================================
+   WISHLIST PAGE
+   The heart control itself lives in product-card.css (`.wishlist-button`)
+   because it appears on cards. This file covers the saved-items page.
+
+   The page is a product grid, not a bespoke list: the same `productGrid` the
+   collection page uses renders the saved items, so a saved product looks
+   identical to the same product in search results. Only the page frame and the
+   orphan warning are specific to this view.
+
+   Nothing here persists: the wishlist lives in the client store and clears on
+   reload in this phase. The empty state is therefore a real, reachable state,
+   not a theoretical one.
+
+   The page element is also the container, so it owns the gutters as well as the
+   vertical rhythm - the same contract `.collection-page` has.
+   ========================================================================== */
+
+.wishlist-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}

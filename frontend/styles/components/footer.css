@@ -1,0 +1,284 @@
+/* =============================================================================
+   FOOTER
+   A dark band so the page ends on a different plane than it began. Four
+   regions: a value-prop row, the link columns, a payment/trust row and the
+   legal line.
+
+   The link columns are the actual work of a footer; the newsletter block is
+   above them rather than beside them so it does not steal column width.
+   ========================================================================== */
+
+.site-footer {
+  margin-block-start: auto;
+  padding-block: var(--space-3xl) var(--space-lg);
+  background-color: var(--color-surface-inverse);
+  color: var(--color-text-inverse);
+}
+
+@media (min-width: 48em) {
+  .site-footer {
+    padding-block: var(--space-4xl) var(--space-xl);
+  }
+}
+
+/* --- Value props ---------------------------------------------------------- */
+
+.footer__values {
+  display: grid;
+  gap: var(--space-lg);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  padding-block-end: var(--space-2xl);
+  margin-block-end: var(--space-2xl);
+  border-bottom: var(--border-width-hairline) solid var(--ink-800);
+}
+
+.footer__value {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+}
+
+.footer__value-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  color: var(--bone-200);
+  background-color: var(--ink-800);
+  border-radius: var(--radius-md);
+}
+
+.footer__value-icon svg {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+}
+
+.footer__value-title {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+}
+
+.footer__value-text {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-snug);
+  color: var(--color-text-inverse-muted);
+}
+
+/* --- Grid ----------------------------------------------------------------- */
+
+.footer__brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-inline-size: 26rem;
+}
+
+.footer__brand .brand {
+  color: var(--color-text-inverse);
+}
+
+.footer__brand .brand:hover {
+  color: var(--white);
+}
+
+.footer__brand-text {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-inverse-muted);
+}
+
+/* --- Link columns --------------------------------------------------------- */
+
+.footer__column-title {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: var(--text-transform-label);
+  color: var(--bone-300);
+  margin-block-end: var(--space-sm);
+}
+
+.footer__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.footer__list-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  inline-size: fit-content;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-inverse-muted);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.footer__list-link:hover {
+  color: var(--white);
+}
+
+/* The columns are equal-width tracks in one grid, so a three-item group and a
+   five-item group still line up. `auto-fit` with a floor rather than a fixed
+   count, so a fourth column on wide screens does not collapse into four
+   unreadably narrow ones. */
+.footer__grid {
+  display: grid;
+  gap: var(--space-xl);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  padding-block-end: var(--space-2xl);
+}
+
+@media (min-width: 48em) {
+  .footer__grid {
+    gap: var(--space-2xl) var(--space-xl);
+  }
+}
+
+/* The brand column carries a logo, prose, contact details and payment methods, so
+   it needs more room than a link list and spans the full width on mobile. */
+@media (min-width: 64em) {
+  .footer__grid {
+    grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.4fr);
+  }
+}
+
+.footer__column {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.footer__column--newsletter .newsletter__form {
+  margin-block: var(--space-sm);
+}
+
+.footer__contact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.footer__list-icon {
+  inline-size: 1rem;
+  block-size: 1rem;
+  flex-shrink: 0;
+  color: var(--bone-300);
+}
+
+/* The newsletter column is wider than a link list but is not a link list, so it
+   carries no heading rule beyond the shared column title. */
+.footer__note {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-snug);
+  color: var(--color-text-inverse-muted);
+}
+
+/* --- Payment / trust row -------------------------------------------------- */
+
+.footer__trust {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding-block: var(--space-lg);
+  margin-block-start: var(--space-2xl);
+  border-top: var(--border-width-hairline) solid var(--ink-800);
+}
+
+.footer__trust-label {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: var(--text-transform-label);
+  color: var(--color-text-inverse-muted);
+}
+
+.footer__methods {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.footer__method {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: var(--space-3xs) var(--space-xs);
+  font-size: var(--font-size-3xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--bone-300);
+  background-color: var(--ink-800);
+  border-radius: var(--radius-sm);
+}
+
+.footer__method svg {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+}
+
+.footer__method-label {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-3xs);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: var(--text-transform-label);
+  color: var(--color-text-inverse-muted);
+  margin-inline-end: var(--space-2xs);
+}
+
+/* Methods flow as chips beside their label on wide screens and wrap beneath it on
+   narrow ones, where a single row of four chips would overflow. */
+.footer__method-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+/* The pending topics are text, not links, so they must not borrow the link
+   affordance: no colour change, no hover, no underline. Muted, and dimmer still
+   where a note explains them. */
+.footer__list--muted {
+  color: var(--ink-500);
+}
+
+.footer__list-item {
+  font-size: var(--font-size-sm);
+  color: var(--ink-500);
+}
+
+/* --- Legal ---------------------------------------------------------------- */
+
+.footer__legal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding-block-start: var(--space-md);
+  border-top: var(--border-width-hairline) solid var(--ink-800);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-inverse-muted);
+}
+
+.footer__legal-note {
+  margin: 0;
+  color: var(--color-text-inverse-muted);
+}
+
+/* The copyright line sits opposite the legal links. On a narrow footer they wrap
+   onto their own line, so it is allowed to shrink rather than forcing the row
+   wider than the container. */
+.footer__copyright {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-inverse-muted);
+  text-wrap: pretty;
+}
