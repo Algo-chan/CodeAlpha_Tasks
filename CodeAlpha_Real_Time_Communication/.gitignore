@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Storage & Uploads
+server/uploads/*
+!server/uploads/.gitkeep
+
+# System & Editor
+.DS_Store
+Thumbs.db
+*.log
+.superpowers/
+.idea/
+.vscode/

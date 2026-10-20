@@ -1,0 +1,317 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   Apple Human Interface Guidelines (HIG) & Design Engineering Token System
+   ========================================================================== */
+
+:root {
+  /* Content Layer Surfaces (Light) - strictly opaque/standard materials */
+  --color-surface: #FBFBFD;
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-secondary: #F5F5F7;
+  --color-surface-tertiary: #E8E8ED;
+  --color-surface-solid-fallback: #F2F2F7;
+
+  /* Functional Layer: Liquid Glass Tokens (Float over content) */
+  --color-glass-fill: rgba(255, 255, 255, 0.72);
+  --color-glass-fill-clear: rgba(255, 255, 255, 0.35);
+  --color-glass-fill-dense: rgba(255, 255, 255, 0.88);
+  --color-glass-border: rgba(0, 0, 0, 0.08);
+  --color-glass-highlight: rgba(255, 255, 255, 0.65);
+
+  /* Label / Text Hierarchy (Vibrant) */
+  --color-label: #1D1D1F;
+  --color-label-secondary: #6E6E73;
+  --color-label-tertiary: #86868B;
+  --color-label-quaternary: #A1A1A6;
+
+  /* System Grays */
+  --color-gray-1: #8E8E93;
+  --color-gray-2: #AEAEB2;
+  --color-gray-3: #C7C7CC;
+  --color-gray-4: #D1D1D6;
+  --color-gray-5: #E5E5EA;
+  --color-gray-6: #F2F2F7;
+
+  /* Separators & Hairlines */
+  --color-separator: rgba(60, 60, 67, 0.14);
+  --color-separator-opaque: #D2D2D7;
+  --hairline-border: 0.5px solid rgba(0, 0, 0, 0.08);
+
+  /* Apple System Accent & Semantics */
+  --color-accent: #0071E3;
+  --color-accent-hover: #0077ED;
+  --color-accent-muted: rgba(0, 113, 227, 0.10);
+
+  --color-destructive: #FF3B30;
+  --color-destructive-muted: rgba(255, 59, 48, 0.12);
+  --color-success: #34C759;
+  --color-success-muted: rgba(52, 199, 89, 0.12);
+  --color-warning: #FF9500;
+}
+
+/* Dark Mode Tokens */
+.dark {
+  /* Content Layer Surfaces (Dark) */
+  --color-surface: #000000;
+  --color-surface-elevated: #161618;
+  --color-surface-secondary: #1D1D1F;
+  --color-surface-tertiary: #2C2C2E;
+  --color-surface-solid-fallback: #1C1C1E;
+
+  /* Functional Layer: Liquid Glass Tokens (Dark) */
+  --color-glass-fill: rgba(28, 28, 30, 0.75);
+  --color-glass-fill-clear: rgba(20, 20, 22, 0.40);
+  --color-glass-fill-dense: rgba(30, 30, 32, 0.90);
+  --color-glass-border: rgba(255, 255, 255, 0.12);
+  --color-glass-highlight: rgba(255, 255, 255, 0.18);
+
+  /* Label / Text Hierarchy (Dark Vibrant) */
+  --color-label: #F5F5F7;
+  --color-label-secondary: #A1A1A6;
+  --color-label-tertiary: #86868B;
+  --color-label-quaternary: #6E6E73;
+
+  /* System Grays (Dark) */
+  --color-gray-1: #8E8E93;
+  --color-gray-2: #636366;
+  --color-gray-3: #48484A;
+  --color-gray-4: #3A3A3C;
+  --color-gray-5: #2C2C2E;
+  --color-gray-6: #1C1C1E;
+
+  /* Separators (Dark) */
+  --color-separator: rgba(255, 255, 255, 0.12);
+  --color-separator-opaque: #38383A;
+  --hairline-border: 0.5px solid rgba(255, 255, 255, 0.12);
+
+  /* Accents (Dark) */
+  --color-accent: #2997FF;
+  --color-accent-hover: #40A4FF;
+  --color-accent-muted: rgba(41, 151, 255, 0.16);
+
+  --color-destructive: #FF453A;
+  --color-destructive-muted: rgba(255, 69, 58, 0.16);
+  --color-success: #30D158;
+  --color-success-muted: rgba(48, 209, 88, 0.16);
+  --color-warning: #FF9F0A;
+}
+
+/* ==========================================================================
+   Typography Baseline
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
+  background-color: var(--color-surface);
+  color: var(--color-label);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   Apple Liquid Glass (Functional Layer Only)
+   ========================================================================== */
+
+/* Regular Liquid Glass (Floating Bars, Navigation, Sheets) */
+.liquid-glass {
+  background-color: var(--color-glass-fill);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 0.5px solid var(--color-glass-border);
+  box-shadow: 
+    0 16px 40px -10px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0.5px var(--color-glass-highlight);
+}
+
+.dark .liquid-glass {
+  box-shadow: 
+    0 20px 48px -12px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0.5px var(--color-glass-highlight);
+}
+
+/* Clear Liquid Glass (Controls floating directly over media/video streams) */
+.liquid-glass-clear {
+  background-color: var(--color-glass-fill-clear);
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  border: 0.5px solid var(--color-glass-border);
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.15),
+    inset 0 0.5px 0.5px var(--color-glass-highlight);
+}
+
+/* Dense Glass (Sidebar, Popovers, Modals) */
+.liquid-glass-dense {
+  background-color: var(--color-glass-fill-dense);
+  backdrop-filter: blur(36px) saturate(200%);
+  -webkit-backdrop-filter: blur(36px) saturate(200%);
+  border: 0.5px solid var(--color-glass-border);
+  box-shadow: 
+    0 24px 64px -16px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0.5px var(--color-glass-highlight);
+}
+
+.dark .liquid-glass-dense {
+  box-shadow: 
+    0 32px 72px -16px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0.5px var(--color-glass-highlight);
+}
+
+/* Fallback for browsers that don't support backdrop-filter */
+@supports not (backdrop-filter: blur(20px)) {
+  .liquid-glass,
+  .liquid-glass-clear,
+  .liquid-glass-dense {
+    background-color: var(--color-surface-solid-fallback);
+  }
+}
+
+/* Content Layer Cards (Opaque/Elevated standard material — HIG Layer Discipline) */
+.apple-card {
+  background-color: var(--color-surface-elevated);
+  border: 0.5px solid var(--color-separator);
+  border-radius: 24px;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.04), 0 8px 24px -4px rgba(0, 0, 0, 0.03);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
+}
+
+.apple-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 20px 48px -12px rgba(0, 0, 0, 0.06);
+}
+
+.dark .apple-card {
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.5);
+}
+
+.dark .apple-card:hover {
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.7);
+}
+
+/* ==========================================================================
+   Apple Typography System (Exact Optical Tracking & Leading)
+   ========================================================================== */
+
+.text-display {
+  font-size: 56px;
+  line-height: 1.05;
+  letter-spacing: -0.032em;
+  font-weight: 700;
+}
+
+.text-large-title {
+  font-size: 34px;
+  line-height: 41px;
+  letter-spacing: -0.022em;
+  font-weight: 700;
+}
+
+.text-title-1 {
+  font-size: 28px;
+  line-height: 34px;
+  letter-spacing: -0.021em;
+  font-weight: 700;
+}
+
+.text-title-2 {
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -0.018em;
+  font-weight: 600;
+}
+
+.text-title-3 {
+  font-size: 20px;
+  line-height: 25px;
+  letter-spacing: -0.017em;
+  font-weight: 600;
+}
+
+.text-headline {
+  font-size: 17px;
+  line-height: 22px;
+  letter-spacing: -0.016em;
+  font-weight: 600;
+}
+
+.text-body {
+  font-size: 17px;
+  line-height: 22px;
+  letter-spacing: -0.016em;
+  font-weight: 400;
+}
+
+.text-callout {
+  font-size: 16px;
+  line-height: 21px;
+  letter-spacing: -0.014em;
+  font-weight: 400;
+}
+
+.text-subheadline {
+  font-size: 15px;
+  line-height: 20px;
+  letter-spacing: -0.012em;
+  font-weight: 400;
+}
+
+.text-footnote {
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: -0.008em;
+  font-weight: 400;
+}
+
+.text-caption-1 {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0em;
+  font-weight: 400;
+}
+
+.text-caption-2 {
+  font-size: 11px;
+  line-height: 13px;
+  letter-spacing: 0.006em;
+  font-weight: 400;
+}
+
+/* ==========================================================================
+   Apple Scrollbars & Reduced Motion
+   ========================================================================== */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-gray-4);
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-gray-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+    scroll-behavior: auto !important;
+  }
+}
