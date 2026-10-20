@@ -1,0 +1,311 @@
+# Roadmap
+
+## Phase 1 — Architecture & Environment (done)
+
+- [x] Repository inspected, README preserved
+- [x] Workspace: root + backend + frontend workspaces
+- [x] Tooling: ESLint, Prettier, EditorConfig, .gitignore, .env.example
+- [x] Backend scaffold with layers (routes → controllers → services → repositories)
+- [x] Express app with security middleware, JSON, CORS, rate limiting
+- [x] API versioning (`/api/v1`), 404, centralized error handler, response envelope
+- [x] Roles: `CUSTOMER`, `ADMIN`, `SELLER` prepared; auth middleware fails closed
+- [x] Validation middleware (Zod) ready
+- [x] PostgreSQL pool, health probe, migration runner, seed runner
+- [x] Reference health check vertical slice
+- [x] API placeholders for all planned resources (501)
+- [x] Frontend scaffold: tokens, base, layout, utilities, component contract
+- [x] Static dev server, API client, page/component conventions
+- [x] Automated tests (health, 404, placeholders, error envelope)
+- [x] Documentation: architecture, API, database plan, setup, roadmap
+
+## Phase 2 — Database & Domain Foundation (done)
+
+- [x] Draw ER diagrams for all 16 entities (`docs/database-erd.md`)
+- [x] Settle conventions: `UUID` keys, money as `BIGINT` minor units, `TIMESTAMPTZ`,
+      `VARCHAR` + `CHECK` over `ENUM`
+- [x] Write 18 migrations (`backend/migrations/`): users, addresses, categories,
+      products, images, variants, inventory, inventory_transactions, carts,
+      cart_items, wishlists, wishlist_items, orders, order_items, payments, reviews
+- [x] Constraints, foreign keys with deliberate delete behaviour, indexes
+- [x] `set_updated_at` trigger on all 15 mutable tables
+- [x] Add 7 seed files (`backend/seeds/`) with realistic, reproducible demo data
+- [x] Verify: every migration and seed executes, plus 66 behavioural assertions
+- [x] Documentation: ERD, design decisions, migration and seed conventions
+
+Deferred from this phase, since it was scoped to the database only:
+
+- [ ] Design brand identity (colours, typography, logo placeholder) → moves to the UI phase
+- [ ] Refine `frontend/css/tokens.css` → moves to the UI phase
+
+`npm run migrate && npm run seed` still needs a PostgreSQL server to run; both
+have been validated against an in-process PostgreSQL (PGlite) instead. See
+[setup.md](./setup.md) for the server requirement.
+
+## Phase 3 — Frontend Design System & UI Foundation (done)
+
+No business logic, no API calls: a design system and a set of reusable,
+context-agnostic storefront primitives that later phases plug data into.
+
+- [x] Centralised design tokens: colour, typography, spacing, layout, borders,
+      shadows, motion, z-index (`frontend/styles/tokens.css`)
+- [x] Typography: one display face plus one sans, non-blocking load
+- [x] Mobile-first responsive system across six breakpoints
+- [x] CSS foundation: reset, base, layout, utilities, animations, components
+- [x] Storefront shell: announcement bar, sticky header, footer
+- [x] Navigation: desktop dropdowns, mobile drawer, keyboard support
+- [x] Search: predictive overlay, product and category suggestions, recent searches
+- [x] `ProductCard` with badges, ratings, variants, wishlist, quick view, quick add
+- [x] Product gallery: thumbnails, hover swap, swipe, zoom/fullscreen foundations
+- [x] Flexible variant picker driven by attribute data, not product category
+- [x] Cart drawer (side panel / bottom sheet) with mock state
+- [x] Wishlist interactions and empty state
+- [x] Toast system, modal/drawer/sheet/dropdown primitives with focus management
+- [x] Button, form, rating, badge and price primitives
+- [x] Skeleton, empty and error states
+- [x] Motion system with `prefers-reduced-motion` support
+- [x] Mock data matching the Phase 2 schema and the future API response shape
+- [x] Documentation: [frontend-design-system.md](./frontend-design-system.md)
+
+## Phase 4 — Storefront Experience (done)
+
+The customer-facing storefront, built from the Phase 3 primitives. Still no
+backend: mock data in, `localStorage` for cart and wishlist.
+
+- [x] Homepage composed of reusable, data-driven sections: hero, category
+      discovery, featured, new arrivals, editor's picks, editorial band, how it
+      works, guarantees, newsletter
+- [x] Collection page: facets, sorting, pagination, URL round-trip
+- [x] Product page: gallery, variants, availability, related products
+- [x] Cart and wishlist pages alongside the drawer
+- [x] Search wired to mock data: scoring, suggestions, no-results, clear
+- [x] Quick view functional against mock data, including variant availability
+- [x] Cart state: add/remove/quantity/undo, stock ceilings, integer-only totals
+- [x] Wishlist state with product ids and count badge
+- [x] Responsive mobile experience: bottom sheets, compact header, touch targets
+- [x] Loading, empty and error states on every data path
+- [x] 154 frontend tests on the pure logic (`node:test`)
+- [x] Accessibility pass: landmarks, focus management, live regions, reduced motion
+- [x] No dead links: every footer and card action resolves to real content
+- [x] Documentation: [frontend-storefront.md](./frontend-storefront.md)
+
+Deferred from this phase, since it was scoped to the storefront UI:
+
+- [ ] Real API integration → Phase 6, backend done, frontend pending
+- [ ] Checkout, payment and orders → later phases
+- [ ] Final brand identity → still placeholder, configurable in one file
+
+## Phase 5 — Authentication & Customers (done)
+
+Cookie-session identity: bcrypt-hashed credentials, opaque server-side session
+tokens (stored as hashes, so revocation and logout are real), and the first
+authenticated API surface — profile, addresses and password change. This
+supersedes the JWT access/refresh sketch in api.md; a cookie whose hash is all
+that reaches the database makes logout and password changes actually revoke,
+which paper access tokens cannot.
+
+- [x] `users`, `user_sessions`, `addresses` tables with partial-unique
+      constraints (one active session set per user, one default address per
+      user)
+- [x] Password hashing with bcrypt (`BCRYPT_SALT_ROUNDS`); unknown email and
+      wrong password answer identically so sign-in confirms no accounts
+- [x] Opaque 32-byte session tokens stored as SHA-256; `HttpOnly`,
+      `SameSite=Lax` cookie; expiry from `SESSION_TTL_HOURS`; logout revokes
+- [x] `authenticate` fails closed (missing/forged/expired/revoked/suspended →
+      401/403) and `authorize(ROLES.ADMIN, ...)` guards staff routes
+- [x] Auth endpoints: register, login, logout, me, profile, password, addresses
+      (list/create/edit/delete/set-default)
+- [x] CSRF defense: SameSite=Lax plus `requireSameOrigin`; a stricter per-IP
+      limiter on register/login only
+- [x] Registration strips privileged fields and lowercases email; suspended
+      accounts are refused everywhere, even with a live session
+- [x] Address rules enforced in SQL too: the first address becomes the default,
+      `set-default` is atomic, and deleting the default promotes the oldest
+- [x] Changing the password revokes every other session and keeps the current
+      one
+- [x] 36 API tests covering the whole surface; suite green: 246 backend
+- [x] Storefront: auth store, one-time guest-basket transition (snapshot at
+      sign-in, settle at boot), login/register/account pages, auth-aware header
+- [x] Frontend tests for the auth store and the guest merge; suite green:
+      172 frontend
+- [ ] Email verification and password reset → deferred (no email provider yet)
+- [ ] Admin user management → the staff surface, Phase 11
+
+## Phase 6 — Catalogue API (products & categories)
+
+Backend complete and documented in
+[product-discovery.md](./product-discovery.md). Frontend transition still pending.
+
+- [x] Categories tree (parent/child) with descendant-inclusive counts, breadcrumbs
+- [x] `GET /categories`, `/categories/:slug` — a category page is a listing scoped
+      to its subtree, validated in two stages so the path slug wins over any
+      `?category=` parameter
+- [x] `GET /products`, `/products/:slug`, `/products/:slug/reviews`,
+      `/products/:slug/related` — read-only, public, `Cache-Control: max-age=60`
+- [x] Availability model: `stock` is `null` (untracked/digital) or an object with
+      `available`; never `0`. `is_listable` is independent of purchasability, so a
+      sold-out product stays in the grid
+- [x] Editorial fields with no column behind them: `is_new` derived from
+      `created_at`, `is_featured: false`, `display_order: 0`
+- [x] Search, filtering, sorting, pagination — server-side, with facets counted
+      per-dimension and sort keys matching the frontend spellings
+- [x] Attribute filters: OR within a key, AND across keys; variant attributes are
+      searchable so the filter panel never offers an option search cannot find
+- [x] Review presenter with server-derived verified-purchase status, and no
+      reviewer email or account id in the payload
+- [x] 96 catalogue tests (59 HTTP through the full stack on PGlite, 37 unit)
+- [x] Whole suite green: 246 backend, 172 frontend, lint and format clean
+- [ ] Swap `mockApi` for `core/api.js` and move collection/search/category pages
+      onto server-driven URL state; component contracts unchanged
+- [x] Move `canSelectAttribute`/`findVariantFor` out of `mock/view.js` into
+      `frontend/js/utils/product-view.js`, so components stop importing from
+      `mock/`; badge vocabulary and the low-stock threshold moved with them
+- [x] `cart.js`: read `variant.is_active` / `variant.is_purchasable` instead of the
+      fixture-only `stock.is_active`, and treat `stock === null` as in stock
+- [x] Drop the fabricated `stock.is_active: quantity > 0` from the fixtures and emit
+      the backend's `is_tracked` instead, so "sold out" (`available === 0`) and "row
+      inactive" stop being the same event
+- [ ] Inventory write endpoints (quantity, reserved, transactions) — deferred, as
+      the read model did not need them
+
+## Phase 7 — Cart & Wishlist API (done)
+
+- [x] Persistent cart per authenticated user
+- [x] Guest carts retained on the httpOnly `ecom_cart` cookie and merged on sign-in
+- [x] Cart endpoints, server-side totals
+- [x] Wishlist add/remove/list
+- [x] Reconcile client cart state against the server on load
+
+## Phase 8 — Checkout & Orders (done)
+
+Checkout is one transaction: order, order items, payment record, stock deduction
+and ledger entries all commit together or not at all. Money and totals are
+recomputed server-side from the database; the request carries fulfilment details
+only. COD is the only real method; the schema already distinguishes `ONLINE`.
+
+- [x] Checkout flow: contact and delivery address, COD only
+- [x] Order creation: atomic transaction (inventory deduction, order items,
+      payment record, ledger entries)
+- [x] Order number (`ORD-YYYYMMDD-NNNN`, allocated under an advisory lock),
+      order status and payment status
+- [x] Delivery fee: flat default, waived at or above the free threshold, in
+      `delivery.service.js`
+- [x] Orders history + order details (`GET /orders`, `GET /orders/:orderNumber`),
+      scoped to the session user in SQL
+- [x] Storefront: `checkout.html` (form → inline confirmation) and `orders.html`
+      (history with expandable detail); the cart's Checkout button now navigates
+- [x] 13 checkout API tests on PGlite; suite green: 290 backend, frontend helpers
+      tested
+- [x] Documentation: api.md checkout & orders section
+
+Deferred from this phase:
+
+- [ ] Order status transitions (staff-side) → Phase 11
+- [ ] Online payment providers (Stripe/Paystack) → Phase 9
+
+## Phase 9 — Payments (extensible) (done)
+
+An in-house online-payment architecture that keeps COD as the default while a
+sandbox provider stands in for a real gateway. The provider boundary lives in
+`backend/src/payments/`: adapters expose `name`, `supportsOnline`,
+`supportsRefunds`, `initializePayment` and `processWebhook`, so a real gateway
+is a new adapter plus a `PAYMENT_PROVIDER` value, not a rewrite.
+
+- [x] Provider registry (`getProvider`/`getActiveOnlineProvider`/`listProviders`),
+      COD adapter (`INTERNAL`, offline) and `MOCK` sandbox adapter with
+      `MOCK-*` references and a redirect `nextAction`
+- [x] Payment intent creation (`POST /api/v1/payments`), signed-in owner-only,
+      guarded against COD orders (409 `PAYMENT_NOT_REQUIRED`), duplicates
+      (409) and settled orders; stale PENDING intents expired first
+- [x] Verified settlement: webhook signature over the raw body (HMAC-SHA256 of
+      `` `${timestamp}.${body}` ``, timestamp tolerance), provider-scoped URL,
+      unknown references 404, amount/currency mismatch 422
+- [x] Idempotent atomic settlement: `PENDING → PAID/FAILED` with `paid_at` /
+      `failure_reason`, order `payment_status` follows, a PAID online order also
+      becomes `CONFIRMED`; replay answers 200 `duplicate: true`; FAILED leaves
+      the order retryable with a fresh reference
+- [x] `expireStalePending` (service) marks aged PENDING intents FAILED so a
+      scheduled job can drop in later
+- [x] Refund capability declared on the provider contract, execution 501 for now
+- [x] Delivery estimates: ETA windows, availability and zone rules flow through
+      `delivery.service.js` into every order view
+- [x] COD checkout unchanged and still default; `ONLINE` checkout creates a
+      PENDING intent with the active provider
+- [x] 19 payments API tests + updated checkout/catalogue/foundation tests;
+      suite green: 309 backend, lint clean
+- [x] Environment: `PAYMENT_PROVIDER`, `PAYMENT_WEBHOOK_SECRET`
+      (production-required when a provider is on), `PAYMENT_WEBHOOK_TOLERANCE_SECONDS`,
+      `PAYMENT_MOCK_CHECKOUT_URL`, `PAYMENT_PENDING_TIMEOUT_MINUTES`
+- [x] Documentation: api.md payments section
+
+Deferred (the architecture is the deliverable; real rails are not):
+
+- [ ] Stripe/Paystack/Telebirr adapters + credentials → a provider adapter each
+- [ ] Automated refunds (contract ready, 501 by design)
+- [ ] Scheduled job driving `expireStalePending`
+- [ ] Guest-resumable online payment for orders placed while signed out
+- [ ] Storefront payment UI (intent redirect, webhook-fired confirmation)
+
+## Phase 10 — Reviews & Ratings (done)
+
+Reviews are earned, not asserted. A review is anchored to a purchased order line
+(`order_item_id`), so "verified purchase" is a fact of the schema rather than a
+badge. The product is derived from that line server-side, so a review can never
+be aimed at something the customer did not buy. Every new review is created
+`PENDING` and only counts once an administrator approves it.
+
+- [x] Customer review submission (`POST /api/v1/reviews`) with eligibility proved
+      against the DELIVERED, owned order line (422 `REVIEW_NOT_ELIGIBLE`
+      otherwise); guests and unowned lines can never qualify
+- [x] One review per user per product and per purchase line, enforced by both the
+      unique constraints and a pre-check (409 `REVIEW_ALREADY_SUBMITTED`)
+- [x] `GET /api/v1/reviews/reviewable` — the caller's delivered, un-reviewed
+      lines, newest first, scoped to the session
+- [x] Average rating + distribution (read path, approved reviews only)
+- [x] Moderation status (pending/approved/rejected) via the admin surface
+- [x] Storefront: inline "write a review" forms on the orders page, with a star
+      picker and draft state that survives redraws
+- [x] 10 review API tests on PGlite + 12 frontend review-helper tests; suite
+      green: 341 backend, 248 frontend, lint clean
+- [x] Documentation: api.md reviews section
+
+## Phase 11 — Admin Dashboard (done)
+
+- [x] Admin layout, navigation, RBAC
+- [x] Product/inventory management
+- [x] Orders management, status updates
+- [x] Coupons, discounts
+- [x] Basic analytics (sales, orders, products)
+
+## Phase 12 — Polish, QA & Deployment (done)
+
+- [x] Production architecture documented ([deployment.md](./deployment.md))
+- [x] Environment template and production secret guidance (`.env.example`)
+- [x] Database deployment: migrations, indexes, constraints, real-PostgreSQL
+      verification (`npm run verify:db`)
+- [x] Backend production config: secure cookies, CORS, logging, graceful
+      shutdown, connection pool, `GET /health` readiness probe
+- [x] Frontend production API URL (same-origin default, `__APP_CONFIG__` override)
+- [x] Image storage as external URLs with strict `http(s)` validation
+- [x] Payment production checks (signatures, idempotency, replay, amount/currency)
+- [x] Monitoring, backups and rollback documented
+- [x] CI pipeline: lint, format, tests, and a real-PostgreSQL job
+- [x] End-to-end production smoke test (`backend/tests/smoke.production.test.js`)
+
+Outstanding (not required for a stable COD release):
+
+- [ ] A real payment-gateway adapter (the sandbox stands in) and refund execution
+- [ ] Retire the frontend mock fixtures once the storefront runs entirely on the API
+- [ ] Real product photography and brand identity
+- [ ] Accessibility audit with assistive technology; cross-browser QA
+- [ ] OpenAPI/Swagger documentation if the API grows an external consumer
+
+### Notes
+
+- Nothing business-specific was built in Phase 1 on purpose.
+- Every new backend feature follows the same layering: route → controller →
+  service → repository. The health check is the reference implementation.
+- Phases 3 and 4 deliberately shipped no API calls: the storefront was built
+  against fixtures shaped like the Phase 2 schema, so swapping in the real client
+  is a change to `app.js` and not to any component.
+- Keep the design original (inspired by Shopify/Wix in UX goals, not copied).
+- Prefer clarity and maintainability over premature abstraction.

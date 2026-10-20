@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Roman Store &middot; Considered clothing, footwear and homeware</title>
+    <meta
+      name="description"
+      content="Roman Store selects considered clothing, footwear and homeware for how they hold up to daily use. Delivered across Addis Ababa."
+    />
+
+    <!-- The theme colour is what a mobile browser tints its own chrome with, so
+         it matches the canvas rather than being left to guess. -->
+    <meta name="theme-color" content="#fbfaf8" />
+
+    <!-- Open Graph, so a shared link is not a blank card. Absolute image URLs
+         are required here and are only meaningful in a deployed environment,
+         so the logo is inlined as a data URI. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Roman Store" />
+    <meta property="og:site_name" content="Roman Store" />
+    <meta
+      property="og:description"
+      content="Considered clothing, footwear and homeware, selected for how it holds up to daily use."
+    />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles/main.css" />
+
+    <!-- Self-hosted webfonts, loaded non-blockingly: the stylesheet is applied
+         first and the display face swaps in when it arrives, so text is never
+         invisible waiting on a network round trip. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      media="print"
+      data-font-stylesheet
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
+      />
+    </noscript>
+  </head>
+
+  <body>
+    <!-- The skip link is the first focusable thing on the page. Without it a
+         keyboard user has to Tab through the entire navigation on every page
+         load to reach the content. -->
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <!-- The header, footer, cart drawer, search dialog and toast region are
+         mounted here by js/app.js. They are built in script because they are
+         reactive; see the comment at the top of app.js. -->
+    <div class="page">
+      <main class="page__main" id="main-content">
+        <div class="container">
+          <div class="skeleton-page">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--text"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <noscript>
+      <div class="container noscript-notice">
+        <h1>This shop needs JavaScript</h1>
+        <p>
+          The catalogue, cart and saved items all run in the browser. Please enable JavaScript, or
+          <a href="/collection.html">browse the collection</a>.
+        </p>
+      </div>
+    </noscript>
+
+    <script type="module" src="/js/app.js" data-page="home"></script>
+  </body>
+</html>
